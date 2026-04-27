@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Reflection Tree — DeepThought</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ─── Variables ─────────────────────────────────── */
+  :root {
+    --bg:        #0e0f13;
+    --bg2:       #14151b;
+    --bg3:       #1c1d26;
+    --border:    rgba(255,255,255,0.07);
+    --text:      #e8e0d0;
+    --muted:     #7a7468;
+    --accent:    #c9a96e;
+    --accent2:   #7ba7bc;
+    --axis1:     #c4735a;
+    --axis2:     #6aaa7a;
+    --axis3:     #8080cc;
+    --r:         12px;
+    --speed:     0.45s;
+  }
+
+  /* ─── Reset ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-x: hidden;
+  }
+
+  /* ─── Ambient Background ─────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 20%, rgba(201,169,110,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 85% 75%, rgba(123,167,188,0.05) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 50% 50%, rgba(128,128,204,0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Layout ─────────────────────────────────────── */
+  #app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 620px;
+  }
+
+  /* ─── Header ─────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .time-display {
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── Axis Progress Bar ──────────────────────────── */
+  #axis-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  #axis-bar.visible { opacity: 1; }
+  .axis-pill {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+  }
+  .axis-pill.active-1  { background: var(--axis1); box-shadow: 0 0 8px var(--axis1); }
+  .axis-pill.active-2  { background: var(--axis2); box-shadow: 0 0 8px var(--axis2); }
+  .axis-pill.active-3  { background: var(--axis3); box-shadow: 0 0 8px var(--axis3); }
+  .axis-pill.done      { background: rgba(255,255,255,0.18); }
+
+  /* ─── Card ───────────────────────────────────────── */
+  #card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 2.8rem 3rem;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.8rem;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeUp 0.6s ease 0.25s forwards;
+  }
+  #card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  /* ─── Node Type Badge ────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .badge.axis1 { color: var(--axis1); }
+  .badge.axis2 { color: var(--axis2); }
+  .badge.axis3 { color: var(--axis3); }
+  .badge.reflection { color: var(--accent); }
+  .badge.bridge { color: var(--accent2); }
+  .badge.summary { color: var(--accent); }
+
+  /* ─── Main Text ──────────────────────────────────── */
+  #node-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.45rem;
+    line-height: 1.65;
+    color: var(--text);
+    white-space: pre-line;
+  }
+  #node-text em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  /* ─── Reflection / Bridge Text ───────────────────── */
+  .reflection-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.0rem;
+    line-height: 1.8;
+    color: #b8b0a0;
+    border-left: 2px solid var(--accent);
+    padding-left: 1.2rem;
+    white-space: pre-line;
+  }
+  .bridge-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: #9ba8b5;
+    white-space: pre-line;
+  }
+
+  /* ─── Options ────────────────────────────────────── */
+  #options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 0.4rem;
+  }
+  .option-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.3rem;
+    color: #c8c0b0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 300;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    line-height: 1.5;
+  }
+  .option-btn:hover {
+    background: #22232e;
+    border-color: rgba(255,255,255,0.16);
+    color: var(--text);
+    transform: translateX(3px);
+  }
+  .option-btn.selected {
+    background: rgba(201,169,110,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .option-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 1px;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+  .option-btn:hover .option-num,
+  .option-btn.selected .option-num {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ─── Continue Button ────────────────────────────── */
+  #continue-btn {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    background: transparent;
+    border: 1px solid rgba(201,169,110,0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1.6rem;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    display: none;
+  }
+  #continue-btn:hover {
+    background: rgba(201,169,110,0.08);
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+  #continue-btn.visible { display: inline-flex; align-items: center; gap: 8px; }
+  #continue-btn svg { transition: transform 0.2s; }
+  #continue-btn:hover svg { transform: translateX(3px); }
+
+  /* ─── Summary Card ───────────────────────────────── */
+  #summary-card {
+    display: none;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+  #summary-card.visible { display: flex; }
+  .summary-axis {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .summary-axis-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .summary-axis-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.0rem;
+    color: var(--text);
+  }
+  .summary-axis-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .summary-axis-bar {
+    height: 100%;
+    border-radius: 2px;
+    width: 0;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  .summary-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.0rem;
+    line-height: 1.85;
+    color: #b0a898;
+    border-top: 1px solid var(--border);
+    padding-top: 1.4rem;
+    margin-top: 0.4rem;
+  }
+  .summary-divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0.25;
+  }
+
+  /* ─── End Screen ─────────────────────────────────── */
+  #end-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    text-align: center;
+    padding: 2rem 0;
+  }
+  #end-screen.visible { display: flex; }
+  .end-icon {
+    font-size: 2.4rem;
+    opacity: 0.6;
+  }
+  .end-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.6rem;
+    color: var(--accent);
+  }
+  .restart-btn {
+    margin-top: 1rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .restart-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+
+  /* ─── Loading / Error ────────────────────────────── */
+  #loading { color: var(--muted); font-size: 0.9rem; text-align: center; }
+  #error-msg { color: #cc6060; font-size: 0.88rem; line-height: 1.6; }
+
+  /* ─── Transitions ────────────────────────────────── */
+  .fade-out { animation: fadeOut var(--speed) ease forwards; }
+  .fade-in  { animation: fadeIn  var(--speed) ease forwards; }
+
+  @keyframes fadeUp   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeOut  { from { opacity: 1; transform: translateY(0); }   to { opacity: 0; transform: translateY(-10px); } }
+  @keyframes fadeIn   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse    { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* ─── Responsive ─────────────────────────────────── */
+  @media (max-width: 600px) {
+    #card { padding: 2rem 1.5rem; }
+    #node-text { font-size: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <span class="logo">DT · Daily Reflection</span>
+    <span class="time-display" id="time-display"></span>
+  </header>
+
+  <div id="axis-bar">
+    <div class="axis-pill" id="pill-1"></div>
+    <div class="axis-pill" id="pill-2"></div>
+    <div class="axis-pill" id="pill-3"></div>
+  </div>
+
+  <div id="card">
+    <div id="loading" style="animation: pulse 1.5s ease infinite;">Loading reflection tree…</div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  Utilities
+// ─────────────────────────────────────────────
+
+function el(id) { return document.getElementById(id); }
+function now() {
+  const d = new Date();
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function interpolate(text, answers) {
+  return text.replace(/\{([^}]+)\}/g, (_, key) => answers[key] || '');
+}
+
+// ─────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────
+let tree, index;
+const state = {
+  answers: {},
+  signals: {
+    axis1: { internal: 0, external: 0 },
+    axis2: { contribution: 0, entitlement: 0 },
+    axis3: { altro: 0, self: 0 }
+  },
+  currentAxis: null
+};
+
+function recordSignal(signal) {
+  if (!signal) return;
+  const [axis, pole] = signal.split(':');
+  if (axis && pole && state.signals[axis]) {
+    state.signals[axis][pole] = (state.signals[axis][pole] || 0) + 1;
+  }
+}
+
+function dominantPole(axis) {
+  const poles = state.signals[axis];
+  if (!poles) return null;
+  const entries = Object.entries(poles);
+  if (!entries.length) return null;
+  const max = Math.max(...entries.map(e => e[1]));
+  if (max === 0) return null;
+  const winners = entries.filter(e => e[1] === max).map(e => e[0]).sort();
+  return winners[0];
+}
+
+// ─────────────────────────────────────────────
+//  Progress Bar
+// ─────────────────────────────────────────────
+function updateAxisBar(axis) {
+  const bar = el('axis-bar');
+  bar.classList.add('visible');
+  ['pill-1', 'pill-2', 'pill-3'].forEach((id, i) => {
+    const pill = el(id);
+    pill.className = 'axis-pill';
+    if (axis === `axis${i+1}`) pill.classList.add(`active-${i+1}`);
+    else if (axis && parseInt(axis.slice(-1)) > i+1) pill.classList.add('done');
+  });
+}
+
+// ─────────────────────────────────────────────
+//  Card Transition
+// ─────────────────────────────────────────────
+function transitionCard(renderFn) {
+  const card = el('card');
+  card.classList.add('fade-out');
+  setTimeout(() => {
+    card.innerHTML = '';
+    card.classList.remove('fade-out');
+    renderFn();
+    card.classList.add('fade-in');
+    setTimeout(() => card.classList.remove('fade-in'), 500);
+  }, 420);
+}
+
+// ─────────────────────────────────────────────
+//  Node Router
+// ─────────────────────────────────────────────
+function navigate(nodeId) {
+  if (!nodeId) return;
+  const node = index[nodeId];
+  if (!node) { renderError(`Node not found: ${nodeId}`); return; }
+
+  if (node.axis) { state.currentAxis = node.axis; updateAxisBar(node.axis); }
+
+  switch (node.type) {
+    case 'start':      transitionCard(() => renderStart(node));      break;
+    case 'question':   transitionCard(() => renderQuestion(node));   break;
+    case 'decision':   navigate(resolveDecision(node));              break;
+    case 'reflection': transitionCard(() => renderReflection(node)); break;
+    case 'bridge':     transitionCard(() => renderBridge(node));     break;
+    case 'summary':    transitionCard(() => renderSummary(node));    break;
+    case 'end':        transitionCard(() => renderEnd(node));        break;
+    default:           navigate(node.next);
+  }
+}
+
+function resolveDecision(node) {
+  for (const route of node.routes) {
+    const c = route.condition;
+    if (c.type === 'answer') {
+      const given = state.answers[c.node];
+      if (c.values.includes(given)) return route.next;
+    } else if (c.type === 'signal_dominant') {
+      const dom = dominantPole(c.axis);
+      if (dom === c.dominant) return route.next;
+    }
+  }
+  return node.routes[node.routes.length - 1].next;
+}
+
+// ─────────────────────────────────────────────
+//  Renderers
+// ─────────────────────────────────────────────
+function badge(label, cls='') {
+  return `<div class="badge ${cls}"><span class="badge-dot"></span>${label}</div>`;
+}
+function continueBtn(label='Continue') {
+  return `<button id="continue-btn" class="visible">
+    ${label}
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>`;
+}
+
+function renderStart(node) {
+  el('card').innerHTML = `
+    ${badge('Evening Reflection')}
+    <div id="node-text">${interpolate(node.text, state.answers)}</div>
+    ${continueBtn('Begin')}
+  `;
+  el('continue-btn').onclick = () => navigate(node.next);
+}
+
+function renderQuestion(node) {
+  const axisNum = node.axis ? node.axis.slice(-1) : '';
+  const axisLabel = node.axis ? { axis1: 'Axis 1 · Locus', axis2: 'Axis 2 · Orientation', axis3: 'Axis 3 · Radius' }[node.axis] : '';
+  el('card').innerHTML = `
+    ${axisLabel ? badge(axisLabel, node.axis) : ''}
+    <div id="node-text">${interpolate(node.text, state.answers)}</div>
+    <div id="options">
+      ${node.options.map((opt, i) => `
+        <button class="option-btn" data-idx="${i}">
+          <span class="option-num">${i+1}</span>
+          <span>${opt.label}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  el('card').querySelectorAll('.option-btn').forEach(btn => {
+    btn.onclick = () => {
+      el('card').querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const opt = node.options[parseInt(btn.dataset.idx)];
+      state.answers[node.id] = opt.label;
+      recordSignal(opt.signal);
+      setTimeout(() => navigate(opt.next), 280);
+    };
+  });
+}
+
+function renderReflection(node) {
+  el('card').innerHTML = `
+    ${badge('Reflection', 'reflection')}
+    <div class="reflection-text">${interpolate(node.text, state.answers)}</div>
+    ${continueBtn()}
+  `;
+  el('continue-btn').onclick = () => navigate(node.next);
+}
+
+function renderBridge(node) {
+  el('card').innerHTML = `
+    ${badge('Moving On', 'bridge')}
+    <div class="bridge-text">${interpolate(node.text, state.answers)}</div>
+  `;
+  // Update axis bar for next axis
+  const nextNode = index[node.next];
+  if (nextNode && nextNode.axis) updateAxisBar(nextNode.axis);
+  setTimeout(() => navigate(node.next), 2000);
+}
+
+function renderSummary(node) {
+  updateAxisBar('done');
+  ['pill-1','pill-2','pill-3'].forEach(id => {
+    const p = el(id);
+    p.className = 'axis-pill done';
+  });
+
+  // Compute summaries
+  const axisLabels = {
+    axis1: { internal: 'with agency',          external: 'reactively' },
+    axis2: { contribution: 'with contribution', entitlement: 'with entitlement in the mix' },
+    axis3: { altro: 'with a wide radius',       self: 'with a narrow lens' }
+  };
+  const axis1Dom = dominantPole('axis1') || 'external';
+  const axis2Dom = dominantPole('axis2') || 'entitlement';
+  const axis3Dom = dominantPole('axis3') || 'self';
+
+  state.answers['axis1_summary'] = axisLabels.axis1[axis1Dom];
+  state.answers['axis2_summary'] = axisLabels.axis2[axis2Dom];
+  state.answers['axis3_summary'] = axisLabels.axis3[axis3Dom];
+
+  const key = `${axis1Dom}|${axis2Dom}|${axis3Dom}`;
+  state.answers['summary_reflection'] = tree.summary_reflections[key] || 'Thank you for taking the time to look at your day honestly.';
+
+  const axisColors = { axis1: 'var(--axis1)', axis2: 'var(--axis2)', axis3: 'var(--axis3)' };
+  const axisTitles = { axis1: 'Locus — Agency', axis2: 'Orientation — Contribution', axis3: 'Radius — Concern' };
+
+  // Score bars (percentage of "positive" pole)
+  function scoreBar(axis, positivePole) {
+    const s = state.signals[axis];
+    const total = Object.values(s).reduce((a,b)=>a+b,0);
+    const pct = total > 0 ? Math.round((s[positivePole] / total) * 100) : 50;
+    return { pct, label: `${pct}% toward ${positivePole}` };
+  }
+  const bars = [
+    scoreBar('axis1', 'internal'),
+    scoreBar('axis2', 'contribution'),
+    scoreBar('axis3', 'altro')
+  ];
+
+  el('card').innerHTML = `
+    ${badge('Your Reflection', 'summary')}
+    <div id="summary-card" class="visible">
+      ${['axis1','axis2','axis3'].map((ax,i) => `
+        <div class="summary-axis">
+          <div class="summary-axis-label">${axisTitles[ax]}</div>
+          <div class="summary-axis-value">${state.answers[`${ax}_summary`]}</div>
+          <div class="summary-axis-bar-wrap">
+            <div class="summary-axis-bar" id="bar-${ax}" style="background:${axisColors[ax]};"></div>
+          </div>
+        </div>
+      `).join('<div class="summary-divider"></div>')}
+      <div class="summary-text">${interpolate(state.answers['summary_reflection'], state.answers)}</div>
+    </div>
+    ${continueBtn('Close')}
+  `;
+
+  // Animate bars after paint
+  setTimeout(() => {
+    ['axis1','axis2','axis3'].forEach((ax, i) => {
+      const barEl = el(`bar-${ax}`);
+      if (barEl) setTimeout(() => { barEl.style.width = bars[i].pct + '%'; }, i * 200);
+    });
+  }, 100);
+
+  el('continue-btn').onclick = () => navigate(node.next);
+}
+
+function renderEnd(node) {
+  updateAxisBar(null);
+  el('card').innerHTML = `
+    <div id="end-screen" class="visible">
+      <div class="end-icon">🌙</div>
+      <div class="end-text">${interpolate(node.text, state.answers)}</div>
+      <button class="restart-btn" id="restart-btn">Start a new reflection</button>
+    </div>
+  `;
+  el('restart-btn').onclick = () => location.reload();
+}
+
+function renderError(msg) {
+  el('card').innerHTML = `<div id="error-msg">⚠ ${msg}<br><br>Make sure <code>reflection-tree.json</code> is in the <code>tree/</code> folder and you're running a local server (e.g. <code>python -m http.server</code>).</div>`;
+}
+
+// ─────────────────────────────────────────────
+//  Bootstrap
+// ─────────────────────────────────────────────
+el('time-display').textContent = now();
+setInterval(() => { el('time-display').textContent = now(); }, 30000);
+
+fetch('tree/reflection-tree.json')
+  .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+  .then(data => {
+    tree  = data;
+    index = {};
+    data.nodes.forEach(n => index[n.id] = n);
+    navigate('START');
+  })
+  .catch(err => {
+    renderError(`Could not load reflection-tree.json: ${err.message}`);
+  });
+</script>
+</body>
+</html>
