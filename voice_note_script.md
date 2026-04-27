@@ -78,21 +78,3 @@
 > "That's my submission. Happy to answer questions. Looking forward to hearing from you."
 
 ---
-
-## Quick Checklist Before Recording
-
-- [ ] Read through once before recording so it sounds natural
-- [ ] No need to say every word exactly — adapt to your speaking style
-- [ ] Record in a quiet space; ambient noise is fine, echo is not
-- [ ] Aim for 4–5 minutes total; don't rush, don't pad
-- [ ] Upload to Google Drive and share the link with view access
-
----
-
-## Key Points Summary (If You Want to Go Unscripted)
-
-1. **Approach:** Read the psychology first, drew tree on paper, tested questions as if I was a tired employee
-2. **Hallucination control:** Product is deterministic by design — no LLM at runtime; used AI as a critic during design, not an author
-3. **Disagreements:** Rejected scoring summary; rewrote entitlement reflection to ask rather than lecture; trimmed 5-option questions to 4
-4. **Negative prompting:** "Don't moralize, don't score, don't use motivational language, don't add free text, don't require API calls"
-5. **Alignment with guidelines:** Structural (all paths traceable in JSON), psychological (questions tied to specific theories), AI fluency (AI as design partner, not author)
